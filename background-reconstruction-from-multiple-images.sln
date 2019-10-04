@@ -5,6 +5,10 @@ VisualStudioVersion = 15.0.28307.852
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "geometric-alignment-and-photometric-adjustment", "geometric-alignment-and-photometric-adjustment\geometric-alignment-and-photometric-adjustment.vcxproj", "{79198B53-69C4-444B-AD29-2D287AF47BB5}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "meaningful-clique", "meaningful-clique\meaningful-clique.vcxproj", "{EA222CE7-4D5E-4B32-BD94-C6C495AC96D4}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "jitter-blur-correction", "jitter-blur-correction\jitter-blur-correction.vcxproj", "{5323770D-F943-4C08-ACB0-982C7759ACBF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -21,6 +25,22 @@ Global
 		{79198B53-69C4-444B-AD29-2D287AF47BB5}.Release|x64.Build.0 = Release|x64
 		{79198B53-69C4-444B-AD29-2D287AF47BB5}.Release|x86.ActiveCfg = Release|Win32
 		{79198B53-69C4-444B-AD29-2D287AF47BB5}.Release|x86.Build.0 = Release|Win32
+		{EA222CE7-4D5E-4B32-BD94-C6C495AC96D4}.Debug|x64.ActiveCfg = Debug|x64
+		{EA222CE7-4D5E-4B32-BD94-C6C495AC96D4}.Debug|x64.Build.0 = Debug|x64
+		{EA222CE7-4D5E-4B32-BD94-C6C495AC96D4}.Debug|x86.ActiveCfg = Debug|Win32
+		{EA222CE7-4D5E-4B32-BD94-C6C495AC96D4}.Debug|x86.Build.0 = Debug|Win32
+		{EA222CE7-4D5E-4B32-BD94-C6C495AC96D4}.Release|x64.ActiveCfg = Release|x64
+		{EA222CE7-4D5E-4B32-BD94-C6C495AC96D4}.Release|x64.Build.0 = Release|x64
+		{EA222CE7-4D5E-4B32-BD94-C6C495AC96D4}.Release|x86.ActiveCfg = Release|Win32
+		{EA222CE7-4D5E-4B32-BD94-C6C495AC96D4}.Release|x86.Build.0 = Release|Win32
+		{5323770D-F943-4C08-ACB0-982C7759ACBF}.Debug|x64.ActiveCfg = Debug|x64
+		{5323770D-F943-4C08-ACB0-982C7759ACBF}.Debug|x64.Build.0 = Debug|x64
+		{5323770D-F943-4C08-ACB0-982C7759ACBF}.Debug|x86.ActiveCfg = Debug|Win32
+		{5323770D-F943-4C08-ACB0-982C7759ACBF}.Debug|x86.Build.0 = Debug|Win32
+		{5323770D-F943-4C08-ACB0-982C7759ACBF}.Release|x64.ActiveCfg = Release|x64
+		{5323770D-F943-4C08-ACB0-982C7759ACBF}.Release|x64.Build.0 = Release|x64
+		{5323770D-F943-4C08-ACB0-982C7759ACBF}.Release|x86.ActiveCfg = Release|Win32
+		{5323770D-F943-4C08-ACB0-982C7759ACBF}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
