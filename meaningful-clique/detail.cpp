@@ -86,7 +86,6 @@ void findMedian(cv::Mat &cloud, cv::Mat_ <cv::Vec3f >::iterator img_out)
 * @param Folder_name , char *, image folder
 * @param Input_Image , vector of Mat :: CV_32FC3
 * @return number of files
-Appendix Source Code 141
 */
 size_t ReadImagesFromFolder(char * folder_name, std::vector <cv::Mat > & Input_Image)
 {
