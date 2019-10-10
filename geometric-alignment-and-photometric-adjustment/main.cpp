@@ -20,81 +20,81 @@ int main(int, char * argv[])
     try
     {
         std::vector < cv::Mat > img_res, img_geo, homo_inliers;
-        //DIR * folder_dir = opendir(argv[1]);
-        //struct dirent * file_info;
-        cv::Mat img_scene, descriptors_scene;
-        std::vector < cv::KeyPoint > keypoints_scene;
-        auto sift = cv::xfeatures2d::SIFT::create();
-        cv::BFMatcher matcher;
         std::vector < std::vector < cv::Point2f > > match_posi;
-        const float ratio = 0.8;
-
         std::vector<fs::path> filenames;
 
-        //** - - Step1 : Geometric alignment - -**//
-        //while ((file_info = readdir(folder_dir)) != NULL)
-        for (const auto & entry : fs::directory_iterator(argv[1]))
         {
-            //if (strcmp(file_info->d_name, ".") != 0 && strcmp(file_info->d_name, "..") != 0)
+            auto sift = cv::xfeatures2d::SIFT::create();
+            cv::Mat img_scene, descriptors_scene;
+            std::vector < cv::KeyPoint > keypoints_scene;
+
+            cv::BFMatcher matcher;
+            const float ratio = 0.8;
+
+            //** - - Step1 : Geometric alignment - -**//
+            //while ((file_info = readdir(folder_dir)) != NULL)
+            for (const auto & entry : fs::directory_iterator(argv[1]))
             {
-                //std::string dir_whole = argv[1];
-                //dir_whole = dir_whole + "/" + file_info->d_name;
-
-                filenames.push_back(entry.path().filename());
-
-                std::string dir_whole = entry.path().string();
-                if (img_res.empty())
+                //if (strcmp(file_info->d_name, ".") != 0 && strcmp(file_info->d_name, "..") != 0)
                 {
-                    img_res.push_back(cv::imread(dir_whole));
-                    cv::cvtColor(img_res[0], img_scene, cv::COLOR_RGB2GRAY);
-                    sift->detectAndCompute(img_scene, cv::noArray(), keypoints_scene, descriptors_scene);
-                    img_res[0].convertTo(img_res[0], CV_32FC3);
-                }
-                else
-                {
-                    cv::Mat img_object, descriptors_object;
-                    cv::Mat img_ori = cv::imread(dir_whole);
-                    cv::cvtColor(img_ori, img_object, cv::COLOR_RGB2GRAY);
-                    img_ori.convertTo(img_ori, CV_32FC3);
-                    // SIFT keypoints and descriptors //
-                    std::vector < cv::KeyPoint > keypoints_object;
-                    sift->detectAndCompute(img_object, cv::noArray(), keypoints_object, descriptors_object);
-                    // Match descriptors using FLANN matcher //
-                    std::vector < std::vector < cv::DMatch > > matches;
-                    matcher.knnMatch(descriptors_object, descriptors_scene, matches, 2);
-                    std::vector < cv::DMatch > good_matches;
-                    for (size_t i = 0; i < matches.size(); ++i)
+                    //std::string dir_whole = argv[1];
+                    //dir_whole = dir_whole + "/" + file_info->d_name;
+
+                    filenames.push_back(entry.path().filename());
+
+                    std::string dir_whole = entry.path().string();
+                    if (img_res.empty())
                     {
-                        if (matches[i][0].distance < ratio * matches[i][1].distance)
-                            good_matches.push_back(matches[i][0]);
+                        img_res.push_back(cv::imread(dir_whole));
+                        cv::cvtColor(img_res[0], img_scene, cv::COLOR_RGB2GRAY);
+                        sift->detectAndCompute(img_scene, cv::noArray(), keypoints_scene, descriptors_scene);
+                        img_res[0].convertTo(img_res[0], CV_32FC3);
                     }
-                    // Get coordinates of matched pixels //
-                    std::vector < cv::Point2f > obj, scene;
-                    for (size_t i = 0; i < good_matches.size(); ++i)
+                    else
                     {
-                        obj.push_back(keypoints_object[good_matches[i].queryIdx].pt);
-                        scene.push_back(keypoints_scene[good_matches[i].trainIdx].pt);
+                        cv::Mat img_object, descriptors_object;
+                        cv::Mat img_ori = cv::imread(dir_whole);
+                        cv::cvtColor(img_ori, img_object, cv::COLOR_RGB2GRAY);
+                        img_ori.convertTo(img_ori, CV_32FC3);
+                        // SIFT keypoints and descriptors //
+                        std::vector < cv::KeyPoint > keypoints_object;
+                        sift->detectAndCompute(img_object, cv::noArray(), keypoints_object, descriptors_object);
+                        // Match descriptors using FLANN matcher //
+                        std::vector < std::vector < cv::DMatch > > matches;
+                        matcher.knnMatch(descriptors_object, descriptors_scene, matches, 2);
+                        std::vector < cv::DMatch > good_matches;
+                        for (size_t i = 0; i < matches.size(); ++i)
+                        {
+                            if (matches[i][0].distance < ratio * matches[i][1].distance)
+                                good_matches.push_back(matches[i][0]);
+                        }
+                        // Get coordinates of matched pixels //
+                        std::vector < cv::Point2f > obj, scene;
+                        for (size_t i = 0; i < good_matches.size(); ++i)
+                        {
+                            obj.push_back(keypoints_object[good_matches[i].queryIdx].pt);
+                            scene.push_back(keypoints_scene[good_matches[i].trainIdx].pt);
+                        }
+                        match_posi.push_back(scene);
+                        // Compute homography //
+                        cv::Mat inlier_mask;
+                        cv::Mat H = findHomography(obj, scene, CV_RANSAC, 1, inlier_mask);
+                        homo_inliers.push_back(inlier_mask);
+                        // Bilinear interpolation //
+                        std::vector < cv::Mat > img_ch, img_interp(3);
+                        cv::split(img_ori, img_ch);
+                        cv::warpPerspective(img_ch[0], img_interp[0], H, img_scene.size(), cv::INTER_LINEAR);
+                        cv::warpPerspective(img_ch[1], img_interp[1], H, img_scene.size(), cv::INTER_LINEAR);
+                        cv::warpPerspective(img_ch[2], img_interp[2], H, img_scene.size(), cv::INTER_LINEAR);
+                        cv::Mat img_al;
+                        cv::merge(img_interp, img_al);
+                        img_geo.push_back(img_al);
                     }
-                    match_posi.push_back(scene);
-                    // Compute homography //
-                    cv::Mat inlier_mask;
-                    cv::Mat H = findHomography(obj, scene, CV_RANSAC, 1, inlier_mask);
-                    homo_inliers.push_back(inlier_mask);
-                    // Bilinear interpolation //
-                    std::vector < cv::Mat > img_ch, img_interp(3);
-                    cv::split(img_ori, img_ch);
-                    cv::warpPerspective(img_ch[0], img_interp[0], H, img_scene.size(), cv ::
-                        INTER_LINEAR);
-                    cv::warpPerspective(img_ch[1], img_interp[1], H, img_scene.size(), cv ::
-                        INTER_LINEAR);
-                    cv::warpPerspective(img_ch[2], img_interp[2], H, img_scene.size(), cv ::
-                        INTER_LINEAR);
-                    cv::Mat img_al;
-                    cv::merge(img_interp, img_al);
-                    img_geo.push_back(img_al);
                 }
             }
         }
+
+
         //** - - Step2 : Chromatic adjustment - -**//
         std::vector < cv::Mat > colchannel_scene, colchannel_obj;
         cv::Mat pow_two, obj_all;
