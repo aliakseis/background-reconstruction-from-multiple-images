@@ -1,3 +1,5 @@
+#include "StructureFromMotion.h"
+
 #include <opencv2/opencv.hpp>
 //#include <opencv2/nonfree/nonfree.hpp>
 #include <opencv2/xfeatures2d/nonfree.hpp>
@@ -9,6 +11,8 @@
 #include <filesystem>
 
 namespace fs = std::filesystem;
+
+const bool useSFM = true;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Geometric and photometric adjustment : align images in the sequence
@@ -23,6 +27,73 @@ int main(int, char * argv[])
         std::vector < std::vector < cv::Point2f > > match_posi;
         std::vector<fs::path> filenames;
 
+        if (useSFM)
+        {
+            StructureFromMotion sfm(argv[1]);
+            sfm.runSfM();
+
+            //std::vector < cv::KeyPoint > keypoints_scene;
+            std::vector < cv::Point2f > scene_base;
+
+            for (const auto& fn : sfm.imagesFilenames)
+            {
+                filenames.push_back(fs::path(fn.c_str()).filename());
+
+                if (img_res.empty())
+                {
+                    img_res.push_back(sfm.images[fn]);
+
+                    img_res[0].convertTo(img_res[0], CV_32FC3);
+
+                    //keypoints_scene = sfm.keypoints[fn];
+
+                    //for (const auto& kp : sfm.keypoints[fn])
+                    //{
+                    //    scene.push_back(kp.pt);
+                    //}
+                    const int imageID = sfm.imageIDs[fn];
+                    scene_base = sfm.tracks[imageID];
+                }
+                else
+                {
+                    std::vector < cv::Point2f > obj, scene;
+                    //for (const auto& kp : sfm.keypoints[fn])
+                    //{
+                    //    obj.push_back(kp.pt);
+                    //}
+                    const int imageID = sfm.imageIDs[fn];
+                    const auto& obj_base = sfm.tracks[imageID];
+
+                    for (size_t i = 0; i < scene_base.size(); ++i)
+                    {
+                        if (scene_base[i].x >= 0 && scene_base[i].y >= 0 && obj_base[i].x >= 0 && obj_base[i].y >= 0)
+                        {
+                            obj.push_back(obj_base[i]);
+                            scene.push_back(scene_base[i]);
+                        }
+                    }
+
+                    auto img_ori = sfm.images[fn];
+                    img_ori.convertTo(img_ori, CV_32FC3);
+
+                    match_posi.push_back(scene);
+                    // Compute homography //
+                    cv::Mat inlier_mask;
+                    cv::Mat H = findHomography(obj, scene, CV_RANSAC, 1, inlier_mask);
+                    homo_inliers.push_back(inlier_mask);
+                    // Bilinear interpolation //
+                    std::vector < cv::Mat > img_ch, img_interp(3);
+                    cv::split(img_ori, img_ch);
+                    cv::warpPerspective(img_ch[0], img_interp[0], H, img_res[0].size(), cv::INTER_LINEAR);
+                    cv::warpPerspective(img_ch[1], img_interp[1], H, img_res[0].size(), cv::INTER_LINEAR);
+                    cv::warpPerspective(img_ch[2], img_interp[2], H, img_res[0].size(), cv::INTER_LINEAR);
+                    cv::Mat img_al;
+                    cv::merge(img_interp, img_al);
+                    img_geo.push_back(img_al);
+                }
+            }
+        }
+        else
         {
             auto sift = cv::xfeatures2d::SIFT::create();
             cv::Mat img_scene, descriptors_scene;
@@ -75,6 +146,7 @@ int main(int, char * argv[])
                             obj.push_back(keypoints_object[good_matches[i].queryIdx].pt);
                             scene.push_back(keypoints_scene[good_matches[i].trainIdx].pt);
                         }
+
                         match_posi.push_back(scene);
                         // Compute homography //
                         cv::Mat inlier_mask;
@@ -108,8 +180,7 @@ int main(int, char * argv[])
             {
                 if (homo_inliers[img_num].at < uchar >(i) == 1)
                 {
-                    obj_col.push_back(img_geo[img_num].at < cv::Vec3f >((match_posi[img_num])[i]))
-                        ;
+                    obj_col.push_back(img_geo[img_num].at < cv::Vec3f >((match_posi[img_num])[i]));
                     scene_col.push_back(img_res[0].at < cv::Vec3f >((match_posi[img_num])[i]));
                     rand_posi.push_back(match_num);
                     ++match_num;
@@ -155,16 +226,17 @@ int main(int, char * argv[])
                 }
             }
             // Adjust image colors //
-            std::vector < cv::Mat > color_ch(3), geo_channel(3);
+            std::vector < cv::Mat > geo_channel(3);
             cv::split(img_geo[img_num], geo_channel);
+            std::vector < cv::Mat > color_ch;
+            color_ch.reserve(3);
             for (int j = 0; j != 3; ++j)
             {
-                color_ch[j] = final_model[j].at < float >(0, 0) * cv::Mat::ones(geo_channel[j].size()
-                    , CV_32FC1) +
-                    final_model[j].at < float >(1, 0) * geo_channel[j];
                 cv::Mat pow_interp;
                 cv::pow(geo_channel[j], 2, pow_interp);
-                color_ch[j] = color_ch[j] + final_model[j].at < float >(2, 0) * pow_interp;
+                color_ch.push_back(final_model[j].at < float >(0, 0) * cv::Mat::ones(geo_channel[j].size(), CV_32FC1) +
+                    final_model[j].at < float >(1, 0) * geo_channel[j] +
+                    final_model[j].at < float >(2, 0) * pow_interp);
             }
             cv::Mat img_colal;
             cv::merge(color_ch, img_colal);
